@@ -2,7 +2,7 @@
 
 # List Files
 
-foreach(glob("*.{txt,html,json}", GLOB_BRACE) as $file) {
+foreach(glob(__DIR__ . '/logs/' . "*.{txt,html,json}", GLOB_BRACE) as $file) {
     $filenames[] = basename($file);
 }
 
@@ -13,5 +13,6 @@ if (empty($filenames)) {
 rsort($filenames);
 
 foreach($filenames as $filename) {
-    echo '<a href="' . $filename . '" target="_blank">' . $filename . '</a><br>';
+    echo '<a href="logs/' . $filename . '" target="_blank">' . $filename . '</a>';
+    echo ' &nbsp; <a href="?excluir=logs/' . $filename . '">excluir</a><br>';
 }

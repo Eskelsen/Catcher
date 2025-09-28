@@ -16,6 +16,13 @@ ini_set('xdebug.var_display_max_depth', '-1');
 ini_set('xdebug.var_display_max_children', '-1');
 ini_set('xdebug.var_display_max_data', '-1');
 
+# Exclusions
+if (!empty($_GET['excluir'])) {
+	if (is_file($_GET['excluir'])) {
+		unlink($_GET['excluir']);
+	}
+}
+
 # Timezone
 date_default_timezone_set('America/Sao_Paulo');
 
@@ -24,25 +31,21 @@ $content = file_get_contents('php://input');
 $data = json_decode($content, true);
 
 if (empty($content) AND empty($_POST) AND empty($_FILES)) {
-    echo '<strong>Teste CMD Windows:</strong> curl -X POST https://microframeworks.com/tools/catcher/ -H "Content-Type: application/json" -d "{\"message\": \"Hello, 
+	$protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+	$host = $_SERVER['HTTP_HOST'] ?? '';
+	$uri = $_SERVER['REQUEST_URI'] ?? '';
+	$url_base = $protocolo . "://" . $host . $uri;
+    echo '<strong>Teste CMD Windows:</strong> curl -X POST ' . $url_base . ' -H "Content-Type: application/json" -d "{\"message\": \"Hello, 
 world!\"}"' . '<br>';
-    echo '<strong>Teste CMD Linux:</strong> curl -X POST https://microframeworks.com/tools/catcher/ -H "Content-Type: application/json" -d \'{"message": "Hello, world!"}\'' . 
+    echo '<strong>Teste CMD Linux:</strong> curl -X POST ' . $url_base . ' -H "Content-Type: application/json" -d \'{"message": "Hello, world!"}\'' . 
 '<br><br>';
-    if (!empty($_GET['list'])) {
-        include __DIR__ . '/list.php';
-    }
+    include __DIR__ . '/list.php';
     exit();
 }
 
 $headers = apache_request_headers();
 
-# Hold headers
-ob_start();
-
-$ssl = $_SERVER['SSL_CLIENT_CERT'] ?? null;
-
-echo '<pre>';
-var_dump([
+$all = json_encode([
 	'url'		=> $_SERVER['REQUEST_URI'],
 	'content' 	=> $content,
 	'data' 		=> $data,
@@ -51,24 +54,13 @@ var_dump([
 	'_REQUEST' 	=> $_REQUEST,
 	'_FILES' 	=> $_FILES,
 	'headers' 	=> $headers,
-	'ssl'		=> $ssl
-]);
-if (!empty($json) AND empty($data)) {
-	var_dump(['json_last_error' => json_last_error()]);
-}
-echo '</pre>';
+	'server'	=> $_SERVER
+], JSON_PRETTY_PRINT);
 
-$content_in_buffer = ob_get_clean();
-$content_trimmed = trim($content_in_buffer);
-
-if (strlen($content_trimmed)>=32) {
-    file_put_contents(date('YmdHis') . '.html',$content_trimmed);
+if (strlen($all)>=32) {
+    file_put_contents(__DIR__ . '/logs/' . date('YmdHis') . '_all.json',$all);
 	if ($data) {
-		file_put_contents(date('YmdHis') . '.json',json_encode($data, JSON_PRETTY_PRINT));
+		file_put_contents(__DIR__ . '/logs/' . date('YmdHis') . '_body.json',json_encode($data, JSON_PRETTY_PRINT));
 	}
 	exit(json_encode(['status' => true], JSON_PRETTY_PRINT));
-} else {
-    $old_content = is_file('empty.html') ? file_get_contents('empty.html') : '';
-    $new_content = date('Y-m-d H:i:s') . ' :: request vazia.<br>' . $old_content;
-    file_put_contents('empty.html',$new_content);
 }
